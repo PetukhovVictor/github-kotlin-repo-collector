@@ -42,9 +42,9 @@ object Runner {
 
         repoDownloader.downloadSource(repoName)
         repoSourcesFilter.filterByKtFiles("$repoName/$SOURCES_DIRECTORY")
-        val assetsCollected = repoDownloader.downloadAssets(repoName)
+        val isAssetsCollected = repoDownloader.downloadAssets(repoName)
 
-        if (assetsCollected) {
+        if (isAssetsCollected) {
             assetsProcess(reposDirectory, username, repo)
         }
     }
