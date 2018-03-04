@@ -4,6 +4,7 @@ import org.jetbrains.githubkotlinjarcollector.collection.JarExtractor
 import org.jetbrains.githubkotlinrepocollector.downloading.RepoDownloader
 import org.jetbrains.githubkotlinrepocollector.filtering.RepoClassesFilter
 import org.jetbrains.githubkotlinrepocollector.filtering.RepoSourcesFilter
+import org.jetbrains.githubkotlinrepocollector.helpers.TimeLogger
 import org.jetbrains.githubkotlinrepocollector.io.DirectoryWalker
 import org.jetbrains.bytecodeparser.Runner as BytecodeRunner
 import java.io.File
@@ -41,8 +42,10 @@ class RepoProcessor(private val reposDirectory: String) {
         val repoName = "$username/$repo"
         val repoDirectory = "$reposDirectory/$repoName"
 
+        val timeLogger = TimeLogger(task_name = "PARSING TO CST")
         PythonRunner.run("kotlin-source2cst", mapOf(
-                "i" to "$repoDirectory/$SOURCES_DIRECTORY", "o" to "$repoDirectory/$CST_DIRECTORY", "-with_code" to true))
+                "i" to "$repoDirectory/$SOURCES_DIRECTORY", "o" to "$repoDirectory/$CST_DIRECTORY", "-with_code" to true), withPrint = false)
+        timeLogger.finish()
     }
 
     fun downloadAndProcess(username: String, repo: String) {
