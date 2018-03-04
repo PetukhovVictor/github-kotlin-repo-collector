@@ -29,6 +29,8 @@ class PythonRunner {
         }
 
         fun run(libName: String, args: Map<String, Any>, withPrint: Boolean = true) {
+            println("$interpreter ./libs/$libName/main.py${getArgsStr(args)}")
+
             val process = Runtime.getRuntime().exec("$interpreter ./libs/$libName/main.py${getArgsStr(args)}")
             if (withPrint) {
                 printResult(process)

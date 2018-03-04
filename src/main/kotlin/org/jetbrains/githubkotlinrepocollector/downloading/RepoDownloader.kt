@@ -1,8 +1,10 @@
 package org.jetbrains.githubkotlinrepocollector.downloading
 
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.errors.TransportException
 import org.jetbrains.githubkotlinjarcollector.collection.GithubAssetsCollector
 import org.jetbrains.githubkotlinrepocollector.helpers.TimeLogger
+import org.kohsuke.github.GHFileNotFoundException
 import java.io.File
 
 class RepoDownloader(private val reposDirectory: String) {
@@ -13,17 +15,29 @@ class RepoDownloader(private val reposDirectory: String) {
         val repoDirectorySourcesFile = File(repoDirectorySources)
         val timeLogger = TimeLogger(task_name = "DOWNLOAD SOURCES")
 
-        Git.cloneRepository()
-                .setURI("https://github.com/$repoName.git")
-                .setDirectory(repoDirectorySourcesFile)
-                .call()
+        try {
+            Git.cloneRepository()
+                    .setURI("https://github.com/$repoName.git")
+                    .setDirectory(repoDirectorySourcesFile)
+                    .call()
+        } catch (e: TransportException) {
+            println("DOWNLOAD SOURCES ERROR (maybe already removed): $e")
+        }
 
         timeLogger.finish()
     }
 
     fun downloadAssets(repoName: String): Boolean {
-        val repo = assetsCollector.getRepository(repoName)
+        var assetsCollected: Boolean
 
-        return assetsCollector.assetsCollect(repo, "assets")
+        try {
+            val repo = assetsCollector.getRepository(repoName)
+            assetsCollected = assetsCollector.assetsCollect(repo, "assets")
+        } catch (e: GHFileNotFoundException) {
+            println("DOWNLOAD ASSETS ERROR (repo maybe already removed): $e")
+            assetsCollected = false
+        }
+
+        return assetsCollected
     }
 }

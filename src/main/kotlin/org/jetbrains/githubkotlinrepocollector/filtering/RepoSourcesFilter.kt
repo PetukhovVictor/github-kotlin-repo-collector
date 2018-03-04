@@ -9,8 +9,13 @@ class RepoSourcesFilter(private val reposDirectory: String) {
             val f = File(dir)
             val listFiles = f.list()
             var totalSize: Long = 0
-            for (file in listFiles!!) {
-                val folder = File("$dir/$file")
+
+            if (listFiles == null) {
+                return 0
+            }
+
+            listFiles.forEach {
+                val folder = File("$dir/$it")
                 if (folder.isDirectory) {
                     totalSize += deleteEmptyFolders(folder.absolutePath)
                 } else {

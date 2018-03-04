@@ -17,9 +17,15 @@ apply plugin: 'kotlin'
 repositories {
     mavenCentral()
     jcenter()
-    mavenLocal()
     maven {
         url "https://jitpack.io"
+    }
+    mavenLocal()
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'org.jetbrains.githubkotlinrepocollector.MainKt'
     }
 }
 

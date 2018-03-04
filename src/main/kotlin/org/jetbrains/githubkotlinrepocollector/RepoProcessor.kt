@@ -1,5 +1,6 @@
 package org.jetbrains.githubkotlinrepocollector
 
+import org.apache.commons.io.FileUtils
 import org.jetbrains.githubkotlinjarcollector.collection.JarExtractor
 import org.jetbrains.githubkotlinrepocollector.downloading.RepoDownloader
 import org.jetbrains.githubkotlinrepocollector.filtering.RepoClassesFilter
@@ -34,8 +35,7 @@ class RepoProcessor(private val reposDirectory: String) {
             BytecodeRunner.walkAndParse(repoDirectoryJars, it.parentFile, username, repo, isPrint = false)
             it.delete()
         }
-        Files.move(File("$repoDirectoryJars/$username/$repo/$CLASSES_DIRECTORY").toPath(), File("$repoDirectory/$CLASSES_DIRECTORY").toPath())
-        File(repoDirectoryAssets).deleteRecursively()
+        FileUtils.moveDirectory(File("$repoDirectoryJars/$username/$repo/$CLASSES_DIRECTORY"), File("$repoDirectory/$CLASSES_DIRECTORY"))
     }
 
     private fun parsingToCst(username: String, repo: String) {
@@ -44,7 +44,7 @@ class RepoProcessor(private val reposDirectory: String) {
 
         val timeLogger = TimeLogger(task_name = "PARSING TO CST")
         PythonRunner.run("kotlin-source2cst", mapOf(
-                "i" to "$repoDirectory/$SOURCES_DIRECTORY", "o" to "$repoDirectory/$CST_DIRECTORY", "-with_code" to true), withPrint = false)
+                "i" to "$repoDirectory/$SOURCES_DIRECTORY", "o" to "$repoDirectory/$CST_DIRECTORY"), withPrint = false)
         timeLogger.finish()
     }
 
@@ -65,6 +65,6 @@ class RepoProcessor(private val reposDirectory: String) {
             assetsProcess(username, repo)
         }
 
-        repoClassesFilter.filter("$repoName/$CST_DIRECTORY", "$repoName/$CLASSES_DIRECTORY")
+//        repoClassesFilter.filter("$repoName/$CST_DIRECTORY", "$repoName/$CLASSES_DIRECTORY")
     }
 }
