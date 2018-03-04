@@ -7,9 +7,14 @@ class PythonRunner {
     companion object {
         private const val interpreter = "python3"
 
-        private fun getArgsStr(args: Map<String, String>): String {
+        private fun getArgsStr(args: Map<String, Any>): String {
             var argsStr = ""
-            args.map { argsStr += " -${it.key} ${it.value}" }
+            args.map {
+                argsStr += " -${it.key}"
+                if (it.value !is Boolean) {
+                    argsStr += " ${it.value}"
+                }
+            }
             return argsStr
         }
 
@@ -23,8 +28,7 @@ class PythonRunner {
             }
         }
 
-        fun run(libName: String, args: Map<String, String>) {
-            print("$interpreter ./libs/$libName/main.py${getArgsStr(args)}")
+        fun run(libName: String, args: Map<String, Any>) {
             val process = Runtime.getRuntime().exec("$interpreter ./libs/$libName/main.py${getArgsStr(args)}")
             printResult(process)
         }

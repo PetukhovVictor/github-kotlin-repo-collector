@@ -2,6 +2,7 @@ package org.jetbrains.githubkotlinrepocollector
 
 import org.jetbrains.githubkotlinjarcollector.collection.JarExtractor
 import org.jetbrains.githubkotlinrepocollector.downloading.RepoDownloader
+import org.jetbrains.githubkotlinrepocollector.filtering.RepoClassesFilter
 import org.jetbrains.githubkotlinrepocollector.filtering.RepoSourcesFilter
 import org.jetbrains.githubkotlinrepocollector.io.DirectoryWalker
 import org.jetbrains.bytecodeparser.Runner as BytecodeRunner
@@ -19,6 +20,7 @@ class RepoProcessor(private val reposDirectory: String) {
 
     private val repoDownloader = RepoDownloader(reposDirectory)
     private val repoSourcesFilter = RepoSourcesFilter(reposDirectory)
+    private val repoClassesFilter = RepoClassesFilter(reposDirectory)
 
     private fun assetsProcess(username: String, repo: String) {
         val repoName = "$username/$repo"
@@ -28,7 +30,7 @@ class RepoProcessor(private val reposDirectory: String) {
 
         DirectoryWalker(repoDirectoryAssets).run {
             JarExtractor(it, it.parentFile.name).extract()
-            BytecodeRunner.walkAndParse(repoDirectoryJars, it.parentFile, username, repo)
+            BytecodeRunner.walkAndParse(repoDirectoryJars, it.parentFile, username, repo, isPrint = false)
             it.delete()
         }
         Files.move(File("$repoDirectoryJars/$username/$repo/$CLASSES_DIRECTORY").toPath(), File("$repoDirectory/$CLASSES_DIRECTORY").toPath())
@@ -39,20 +41,27 @@ class RepoProcessor(private val reposDirectory: String) {
         val repoName = "$username/$repo"
         val repoDirectory = "$reposDirectory/$repoName"
 
-        PythonRunner.run("kotlin-source2cst", mapOf("i" to "$repoDirectory/$SOURCES_DIRECTORY", "o" to "$repoDirectory/$CST_DIRECTORY"))
+        PythonRunner.run("kotlin-source2cst", mapOf(
+                "i" to "$repoDirectory/$SOURCES_DIRECTORY", "o" to "$repoDirectory/$CST_DIRECTORY", "-with_code" to true))
     }
 
     fun downloadAndProcess(username: String, repo: String) {
         val repoName = "$username/$repo"
+        val repoDirectory = File("$reposDirectory/$repoName")
+
+        if (Files.exists(repoDirectory.toPath())) {
+            repoDirectory.deleteRecursively()
+        }
 
         repoDownloader.downloadSource(repoName)
         repoSourcesFilter.filterByKtFiles("$repoName/$SOURCES_DIRECTORY")
-        val isAssetsCollected = repoDownloader.downloadAssets(repoName)
+        parsingToCst(username, repo)
 
+        val isAssetsCollected = repoDownloader.downloadAssets(repoName)
         if (isAssetsCollected) {
             assetsProcess(username, repo)
         }
 
-        parsingToCst(username, repo)
+        repoClassesFilter.filter("$repoName/$CST_DIRECTORY", "$repoName/$CLASSES_DIRECTORY")
     }
 }
