@@ -10,7 +10,9 @@ class PythonRunner {
         private fun getArgsStr(args: Map<String, Any>): String {
             var argsStr = ""
             args.map {
-                argsStr += " -${it.key}"
+                if (it.value !is Boolean || it.value == true) {
+                    argsStr += " -${it.key}"
+                }
                 if (it.value !is Boolean) {
                     argsStr += " ${it.value}"
                 }
@@ -29,9 +31,8 @@ class PythonRunner {
         }
 
         fun run(libName: String, args: Map<String, Any>, withPrint: Boolean = true) {
-            println("$interpreter ./libs/$libName/main.py${getArgsStr(args)}")
-
             val process = Runtime.getRuntime().exec("$interpreter ./libs/$libName/main.py${getArgsStr(args)}")
+            process.waitFor()
             if (withPrint) {
                 printResult(process)
             }

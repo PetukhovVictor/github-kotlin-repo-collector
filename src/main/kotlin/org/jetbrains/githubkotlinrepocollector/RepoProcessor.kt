@@ -36,15 +36,16 @@ class RepoProcessor(private val reposDirectory: String) {
             it.delete()
         }
         FileUtils.moveDirectory(File("$repoDirectoryJars/$username/$repo/$CLASSES_DIRECTORY"), File("$repoDirectory/$CLASSES_DIRECTORY"))
+        File(repoDirectoryAssets).deleteRecursively()
     }
 
-    private fun parsingToCst(username: String, repo: String) {
+    private fun parsingToCst(username: String, repo: String, withCode: Boolean) {
         val repoName = "$username/$repo"
         val repoDirectory = "$reposDirectory/$repoName"
 
         val timeLogger = TimeLogger(task_name = "PARSING TO CST")
         PythonRunner.run("kotlin-source2cst", mapOf(
-                "i" to "$repoDirectory/$SOURCES_DIRECTORY", "o" to "$repoDirectory/$CST_DIRECTORY"), withPrint = false)
+                "i" to "$repoDirectory/$SOURCES_DIRECTORY", "o" to "$repoDirectory/$CST_DIRECTORY", "-with_code" to withCode), withPrint = false)
         timeLogger.finish()
     }
 
@@ -58,13 +59,14 @@ class RepoProcessor(private val reposDirectory: String) {
 
         repoDownloader.downloadSource(repoName)
         repoSourcesFilter.filterByKtFiles("$repoName/$SOURCES_DIRECTORY")
-        parsingToCst(username, repo)
 
         val isAssetsCollected = repoDownloader.downloadAssets(repoName)
+        parsingToCst(username, repo, isAssetsCollected)
+
         if (isAssetsCollected) {
             assetsProcess(username, repo)
+            repoClassesFilter.filter("$repoName/$CST_DIRECTORY", "$repoName/$CLASSES_DIRECTORY")
+            repoClassesFilter.removeCharsFromCst("$repoName/$CST_DIRECTORY")
         }
-
-//        repoClassesFilter.filter("$repoName/$CST_DIRECTORY", "$repoName/$CLASSES_DIRECTORY")
     }
 }

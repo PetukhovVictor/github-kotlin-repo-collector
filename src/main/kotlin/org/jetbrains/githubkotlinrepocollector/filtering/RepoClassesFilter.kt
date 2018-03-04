@@ -54,7 +54,7 @@ class RepoClassesFilter(private val reposDirectory: String) {
         }
     }
 
-    private fun removeCharsFromCst(cstFolder: String) {
+    fun removeCharsFromCst(cstFolder: String) {
         val cstNodeReference = object: TypeReference<ArrayList<CstNode>>() {}
 
         JsonFilesReader<CstNode>("$reposDirectory/$cstFolder", JSON_EXT, cstNodeReference).run { content: CstNode, file: File ->
@@ -81,6 +81,5 @@ class RepoClassesFilter(private val reposDirectory: String) {
 
         File(classesDirectory).deleteRecursively()
         classesTempDirectory.renameTo(File(classesDirectory))
-        removeCharsFromCst(cstFolder)
     }
 }

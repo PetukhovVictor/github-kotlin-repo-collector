@@ -16,15 +16,26 @@ object Runner {
         val repoProcessor = RepoProcessor(reposDirectory)
         val repoInfoNodeReference = object: TypeReference<RepoInfoList>() {}
         val timeLoggerCommon = TimeLogger(task_name = "REPOS PROCESS")
+        var isContinue = false
 
         JsonFilesReader<RepoInfoList>(repoInfoDirectory, JSON_EXT, repoInfoNodeReference).run(true) { content: RepoInfoList, file: File ->
-            content.items.forEach {
+            val timeLoggerChunk = TimeLogger(task_name = "REPOS CHUNK $file PROCESS")
+            content.items.forEach repoLoop@{
+
+                if (it.full_name == "qanazoga/soturi-v") {
+                    isContinue = true
+                } else if (!isContinue) {
+                    println("SKIP REPO: '${it.full_name}'")
+                    return@repoLoop
+                }
+
                 val timeLogger = TimeLogger(task_name = "REPO ${it.full_name} PROCESS")
                 val repoIdentifier = it.full_name.split("/")
 
                 repoProcessor.downloadAndProcess(username = repoIdentifier[0], repo = repoIdentifier[1])
                 timeLogger.finish(fullFinish = true)
             }
+            timeLoggerChunk.finish(fullFinish = true)
         }
 
         timeLoggerCommon.finish(fullFinish = true)
