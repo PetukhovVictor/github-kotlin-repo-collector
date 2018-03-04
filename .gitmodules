@@ -1,0 +1,3 @@
+[submodule "libs/kotlin-source2cst"]
+	path = libs/kotlin-source2cst
+	url = https://github.com/PetukhovVictor/kotlin-source2cst.git
