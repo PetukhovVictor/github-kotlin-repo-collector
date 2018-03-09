@@ -20,7 +20,7 @@ class RepoDownloader(private val reposDirectory: String) {
                     .setURI("https://github.com/$repoName.git")
                     .setDirectory(repoDirectorySourcesFile)
                     .call()
-        } catch (e: TransportException) {
+        } catch (e: Exception) {
             println("DOWNLOAD SOURCES ERROR (maybe already removed): $e")
         }
 

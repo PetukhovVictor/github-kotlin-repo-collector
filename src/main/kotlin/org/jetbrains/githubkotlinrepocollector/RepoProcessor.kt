@@ -29,13 +29,16 @@ class RepoProcessor(private val reposDirectory: String) {
         val repoDirectory = "$reposDirectory/$repoName"
         val repoDirectoryAssets = "$repoDirectory/$ASSETS_DIRECTORY"
         val repoDirectoryJars = "$repoDirectoryAssets/$JARS_DIRECTORY"
+        val classesDirectory = File("$repoDirectoryJars/$username/$repo/$CLASSES_DIRECTORY")
 
         DirectoryWalker(repoDirectoryAssets).run {
             JarExtractor(it, it.parentFile.name).extract()
             BytecodeRunner.walkAndParse(repoDirectoryJars, it.parentFile, username, repo, isPrint = false)
             it.delete()
         }
-        FileUtils.moveDirectory(File("$repoDirectoryJars/$username/$repo/$CLASSES_DIRECTORY"), File("$repoDirectory/$CLASSES_DIRECTORY"))
+        if (Files.exists(classesDirectory.toPath())) {
+            FileUtils.moveDirectory(classesDirectory, File("$repoDirectory/$CLASSES_DIRECTORY"))
+        }
         File(repoDirectoryAssets).deleteRecursively()
     }
 
@@ -53,10 +56,8 @@ class RepoProcessor(private val reposDirectory: String) {
         val repoName = "$username/$repo"
         val repoDirectory = File("$reposDirectory/$repoName")
 
-        if (Files.exists(repoDirectory.toPath())) {
-            repoDirectory.deleteRecursively()
-        }
-
+        repoDirectory.mkdirs()
+        File("$reposDirectory/$repoName/cst").mkdirs()
         repoDownloader.downloadSource(repoName)
         repoSourcesFilter.filterByKtFiles("$repoName/$SOURCES_DIRECTORY")
 

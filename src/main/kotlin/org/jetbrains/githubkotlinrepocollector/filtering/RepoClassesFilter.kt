@@ -14,6 +14,25 @@ class RepoClassesFilter(private val reposDirectory: String) {
     companion object {
         private const val JSON_EXT = "json"
         private const val TEMP_CLASSES_DIRECTORY = "classes_tmp"
+        private const val PACKAGE_DIRECTIVE = "PACKAGE_DIRECTIVE"
+    }
+
+    private fun findPackageDirective(node: CstNode): String? {
+        if (node.type == PACKAGE_DIRECTIVE) {
+            return node.chars
+        }
+
+        if (node.children != null) {
+            node.children!!.forEach {
+                val packageDirective = findPackageDirective(it)
+
+                if (packageDirective != null) {
+                    return packageDirective
+                }
+            }
+        }
+
+        return null
     }
 
     private fun collectPackages(cstFolder: String): Set<String> {
@@ -22,19 +41,29 @@ class RepoClassesFilter(private val reposDirectory: String) {
 
         JsonFilesReader<CstNode>("$reposDirectory/$cstFolder", JSON_EXT, cstNodeReference).run { content: CstNode, file: File ->
             if (content.children != null) {
-                if (content.children!![0].type == "PACKAGE_DIRECTIVE") {
-                    val packageChars = content.children!![0].chars
-                    val pattern = Pattern.compile("^package (?<package>.*?)$")
-                    val matcher = pattern.matcher(packageChars)
-                    if (matcher.matches()) {
-                        packages.add(matcher.group("package"))
-                    } else {
-                        packages.add("")
-                        println("NOT PACKAGE FOUND: '$packageChars'")
-                    }
+                val packageChars: String?
+
+                if (content.children!![0].type == PACKAGE_DIRECTIVE) {
+                    packageChars = content.children!![0].chars
                 } else {
-                    println("PACKAGE_DIRECTIVE IS NOT FIRST!")
+                    packageChars = findPackageDirective(content)
                 }
+
+                if (packageChars == null) {
+                    println("NOT PACKAGE DIRECTIVE: '$file'")
+                    return@run
+                }
+
+                val pattern = Pattern.compile("^package (?<package>.*?)$")
+                val matcher = pattern.matcher(packageChars)
+                if (matcher.matches()) {
+                    packages.add(matcher.group("package"))
+                } else {
+                    packages.add("")
+                    println("WITHOUT PACKAGE DETECTED: '$packageChars'")
+                }
+            } else {
+                println("EMPTY FILE DETECTED: '$file'")
             }
         }
 

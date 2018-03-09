@@ -27,6 +27,7 @@ jar {
     manifest {
         attributes 'Main-Class': 'org.jetbrains.githubkotlinrepocollector.MainKt'
     }
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
 }
 
 dependencies {
