@@ -1,5 +1,5 @@
 buildscript {
-    ext.kotlin_version = '1.2.21'
+    ext.kotlin_version = '1.2.30'
 
     repositories {
         mavenCentral()
@@ -28,6 +28,7 @@ jar {
         attributes 'Main-Class': 'org.jetbrains.githubkotlinrepocollector.MainKt'
     }
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude ('META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA')
 }
 
 dependencies {
