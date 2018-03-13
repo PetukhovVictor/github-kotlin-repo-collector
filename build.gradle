@@ -21,6 +21,9 @@ repositories {
         url "https://jitpack.io"
     }
     mavenLocal()
+    flatDir {
+        dirs 'libs'
+    }
 }
 
 jar {
@@ -40,6 +43,18 @@ dependencies {
     compile "org.zeroturnaround:zt-zip:1.12"
     compile "org.jetbrains.githubkotlinjarcollector:github-kotlin-jar-collector:0.1"
     compile "org.jetbrains.bytecodeparser:bytecode-parser:0.1"
+    compile name: "antlr-runtime-3.5"
+    compile name: "asm-debug-all-4.1"
+    compile name: "d2j-base-cmd-2.0"
+    compile name: "d2j-jasmin-2.0"
+    compile name: "d2j-smali-2.0"
+    compile name: "dex-ir-2.0"
+    compile name: "dex-reader-2.0"
+    compile name: "dex-reader-api-2.0"
+    compile name: "dex-tools-2.0"
+    compile name: "dex-translator-2.0"
+    compile name: "dex-writer-2.0"
+    compile name: "dx-1.7"
 }
 
 compileKotlin {

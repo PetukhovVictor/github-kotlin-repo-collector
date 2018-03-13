@@ -8,8 +8,6 @@ import org.kohsuke.github.GHFileNotFoundException
 import java.io.File
 
 class RepoDownloader(private val reposDirectory: String) {
-    private val assetsCollector = GithubAssetsCollector(reposDirectory)
-
     fun downloadSource(repoName: String) {
         val repoDirectorySources = "$reposDirectory/$repoName/sources"
         val repoDirectorySourcesFile = File(repoDirectorySources)
@@ -25,19 +23,5 @@ class RepoDownloader(private val reposDirectory: String) {
         }
 
         timeLogger.finish()
-    }
-
-    fun downloadAssets(repoName: String): Boolean {
-        var assetsCollected: Boolean
-
-        try {
-            val repo = assetsCollector.getRepository(repoName)
-            assetsCollected = assetsCollector.assetsCollect(repo, "assets")
-        } catch (e: GHFileNotFoundException) {
-            println("DOWNLOAD ASSETS ERROR (repo maybe already removed): $e")
-            assetsCollected = false
-        }
-
-        return assetsCollected
     }
 }

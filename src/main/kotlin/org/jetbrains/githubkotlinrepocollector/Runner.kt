@@ -13,12 +13,22 @@ import org.jetbrains.bytecodeparser.Stage as BytecodeStage
 
 object Runner {
     private const val JSON_EXT = "json"
+    fun getFilesCount(file: File): Int {
+        val files = file.listFiles()
+        var count = 0
+        for (f in files!!)
+            if (f.isDirectory)
+                count += getFilesCount(f)
+            else
+                count++
+
+        return count
+    }
 
     fun run(repoInfoDirectory: String, reposDirectory: String) {
         val repoProcessor = RepoProcessor(reposDirectory)
         val repoInfoNodeReference = object: TypeReference<RepoInfoList>() {}
         val timeLoggerCommon = TimeLogger(task_name = "REPOS PROCESS")
-        var isContinue = false
         var reposTotal = 0
         var currentNumber = 0
 
@@ -31,7 +41,9 @@ object Runner {
             content.items.forEach repoLoop@{
                 currentNumber++
 
-                if (Files.exists(File("$reposDirectory/${it.full_name}").toPath()) && Files.exists(File("$reposDirectory/${it.full_name}/cst").toPath())) {
+                val repoExist = Files.exists(File("$reposDirectory/${it.full_name}").toPath())
+
+                if (repoExist) {
                     println("SKIP REPO (ALREADY PROCESSED): '${it.full_name}'")
                     return@repoLoop
                 }
