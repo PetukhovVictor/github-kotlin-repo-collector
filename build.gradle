@@ -40,6 +40,7 @@ dependencies {
     compile "org.zeroturnaround:zt-zip:1.12"
     compile "org.jetbrains.githubkotlinjarcollector:github-kotlin-jar-collector:0.1"
     compile "org.jetbrains.bytecodeparser:bytecode-parser:0.1"
+    compile fileTree(dir: 'libs', include: '*.jar')
 }
 
 compileKotlin {

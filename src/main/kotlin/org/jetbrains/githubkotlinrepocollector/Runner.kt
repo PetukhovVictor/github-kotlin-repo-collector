@@ -18,7 +18,6 @@ object Runner {
         val repoProcessor = RepoProcessor(reposDirectory)
         val repoInfoNodeReference = object: TypeReference<RepoInfoList>() {}
         val timeLoggerCommon = TimeLogger(task_name = "REPOS PROCESS")
-        var isContinue = false
         var reposTotal = 0
         var currentNumber = 0
 
@@ -31,7 +30,10 @@ object Runner {
             content.items.forEach repoLoop@{
                 currentNumber++
 
-                if (Files.exists(File("$reposDirectory/${it.full_name}").toPath()) && Files.exists(File("$reposDirectory/${it.full_name}/cst").toPath())) {
+                //  && File("$reposDirectory/${it.full_name}/cst").listFiles().isNotEmpty())
+                if (Files.exists(File("$reposDirectory/${it.full_name}").toPath())
+                        && Files.exists(File("$reposDirectory/${it.full_name}/cst").toPath())
+                        && File("$reposDirectory/${it.full_name}/cst").listFiles().isNotEmpty()) {
                     println("SKIP REPO (ALREADY PROCESSED): '${it.full_name}'")
                     return@repoLoop
                 }

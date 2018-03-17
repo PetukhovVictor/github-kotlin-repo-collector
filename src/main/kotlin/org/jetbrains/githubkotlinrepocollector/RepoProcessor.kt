@@ -62,8 +62,11 @@ class RepoProcessor(private val reposDirectory: String) {
             if (it.extension == "json") {
                 val relativePath = it.relativeTo(File(sourceDirectory))
                 val pathInCstFolder = File("$cstDirectory/$relativePath")
-                File(pathInCstFolder.parent).mkdirs()
-                Files.move(it.toPath(), pathInCstFolder.toPath())
+
+                if (!Files.exists(pathInCstFolder.toPath())) {
+                    File(pathInCstFolder.parent).mkdirs()
+                    Files.move(it.toPath(), pathInCstFolder.toPath())
+                }
             }
         }
     }

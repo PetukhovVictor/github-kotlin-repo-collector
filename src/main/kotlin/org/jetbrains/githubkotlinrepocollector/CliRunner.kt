@@ -2,6 +2,7 @@ package org.jetbrains.githubkotlinrepocollector
 
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.util.concurrent.TimeUnit
 
 object CliRunner {
     private fun getArgsStr(args: Map<String, Any>): String {
@@ -33,9 +34,6 @@ object CliRunner {
 
     fun run(command: String, args: Map<String, Any>, withPrint: Boolean = true) {
         val process = Runtime.getRuntime().exec("$command ${getArgsStr(args)}")
-        process.waitFor()
-        if (withPrint) {
-            printResult(process)
-        }
+        process.waitFor(30, TimeUnit.SECONDS)
     }
 }
