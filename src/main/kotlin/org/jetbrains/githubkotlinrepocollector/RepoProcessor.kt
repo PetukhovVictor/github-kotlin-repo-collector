@@ -18,6 +18,7 @@ class RepoProcessor(private val reposDirectory: String) {
         private const val CLASSES_DIRECTORY = "classes"
         private const val SOURCES_DIRECTORY = "sources"
         private const val CST_DIRECTORY = "cst"
+        private const val KOTLIN_COMPILER_PATH = "libs/kotlinc/bin/kotlinc"
     }
 
     private val repoDownloader = RepoDownloader(reposDirectory)
@@ -47,9 +48,24 @@ class RepoProcessor(private val reposDirectory: String) {
         val repoDirectory = "$reposDirectory/$repoName"
 
         val timeLogger = TimeLogger(task_name = "PARSING TO CST")
-        PythonRunner.run("kotlin-source2cst", mapOf(
-                "i" to "$repoDirectory/$SOURCES_DIRECTORY", "o" to "$repoDirectory/$CST_DIRECTORY", "-with_code" to withCode), withPrint = false)
+        CliRunner.run(KOTLIN_COMPILER_PATH, mapOf("" to "$repoDirectory/$SOURCES_DIRECTORY"), withPrint = false)
         timeLogger.finish()
+    }
+
+    private fun moveCstToCstFolder(username: String, repo: String) {
+        val repoName = "$username/$repo"
+        val repoDirectory = "$reposDirectory/$repoName"
+        val sourceDirectory = "$repoDirectory/$SOURCES_DIRECTORY"
+        val cstDirectory = "$repoDirectory/$CST_DIRECTORY"
+
+        DirectoryWalker(sourceDirectory).run {
+            if (it.extension == "json") {
+                val relativePath = it.relativeTo(File(sourceDirectory))
+                val pathInCstFolder = File("$cstDirectory/$relativePath")
+                File(pathInCstFolder.parent).mkdirs()
+                Files.move(it.toPath(), pathInCstFolder.toPath())
+            }
+        }
     }
 
     fun downloadAndProcess(username: String, repo: String) {
@@ -63,11 +79,12 @@ class RepoProcessor(private val reposDirectory: String) {
 
         val isAssetsCollected = repoDownloader.downloadAssets(repoName)
         parsingToCst(username, repo, isAssetsCollected)
+        moveCstToCstFolder(username, repo)
 
         if (isAssetsCollected) {
             assetsProcess(username, repo)
             repoClassesFilter.filter("$repoName/$CST_DIRECTORY", "$repoName/$CLASSES_DIRECTORY")
-            repoClassesFilter.removeCharsFromCst("$repoName/$CST_DIRECTORY")
         }
+        repoClassesFilter.removeCharsFromCst("$repoName/$CST_DIRECTORY")
     }
 }
