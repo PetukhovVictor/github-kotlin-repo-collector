@@ -32,7 +32,6 @@ object CliRunner {
     }
 
     fun run(command: String, args: Map<String, Any>, withPrint: Boolean = true) {
-        println("$command ${getArgsStr(args)}")
         val process = Runtime.getRuntime().exec("$command ${getArgsStr(args)}")
         process.waitFor()
         if (withPrint) {
