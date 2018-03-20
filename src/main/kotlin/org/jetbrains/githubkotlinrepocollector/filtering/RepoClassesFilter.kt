@@ -39,7 +39,7 @@ class RepoClassesFilter(private val reposDirectory: String) {
         val cstNodeReference = object: TypeReference<ArrayList<CstNode>>() {}
         val packages = mutableSetOf<String>()
 
-        JsonFilesReader<CstNode>("$reposDirectory/$cstFolder", JSON_EXT, cstNodeReference).run(true) { content: CstNode, file: File ->
+        JsonFilesReader<CstNode>("$reposDirectory/$cstFolder", JSON_EXT, cstNodeReference).run { content: CstNode, file: File ->
             if (content.children != null) {
                 val packageChars: String?
 

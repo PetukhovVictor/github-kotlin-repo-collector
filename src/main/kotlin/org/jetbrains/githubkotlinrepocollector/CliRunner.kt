@@ -34,6 +34,6 @@ object CliRunner {
 
     fun run(command: String, args: Map<String, Any>, withPrint: Boolean = true) {
         val process = Runtime.getRuntime().exec("$command ${getArgsStr(args)}")
-        process.waitFor(30, TimeUnit.SECONDS)
+        process.waitFor(10, TimeUnit.SECONDS)
     }
 }

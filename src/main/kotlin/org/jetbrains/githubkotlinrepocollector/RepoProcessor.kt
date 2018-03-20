@@ -38,7 +38,13 @@ class RepoProcessor(private val reposDirectory: String) {
             it.delete()
         }
         if (Files.exists(classesDirectory.toPath())) {
-            FileUtils.moveDirectory(classesDirectory, File("$repoDirectory/$CLASSES_DIRECTORY"))
+            val newClassesDirectory = File("$repoDirectory/$CLASSES_DIRECTORY")
+
+            if (Files.exists(newClassesDirectory.toPath())) {
+                newClassesDirectory.deleteRecursively()
+            }
+
+            FileUtils.moveDirectory(classesDirectory, newClassesDirectory)
         }
         File(repoDirectoryAssets).deleteRecursively()
     }
@@ -46,8 +52,12 @@ class RepoProcessor(private val reposDirectory: String) {
     private fun parsingToCst(username: String, repo: String, withCode: Boolean) {
         val repoName = "$username/$repo"
         val repoDirectory = "$reposDirectory/$repoName"
-
         val timeLogger = TimeLogger(task_name = "PARSING TO CST")
+
+        if (Files.exists(File("$repoDirectory/$CST_DIRECTORY").toPath())) {
+            File("$repoDirectory/$CST_DIRECTORY").deleteRecursively()
+        }
+
         CliRunner.run(KOTLIN_COMPILER_PATH, mapOf("" to "$repoDirectory/$SOURCES_DIRECTORY"), withPrint = false)
         timeLogger.finish()
     }
@@ -77,7 +87,13 @@ class RepoProcessor(private val reposDirectory: String) {
 
         repoDirectory.mkdirs()
         File("$reposDirectory/$repoName/cst").mkdirs()
-        repoDownloader.downloadSource(repoName)
+
+        val isDownloaded = repoDownloader.downloadSource(repoName)
+
+        if (!isDownloaded) {
+            return
+        }
+
         repoSourcesFilter.filterByKtFiles("$repoName/$SOURCES_DIRECTORY")
 
         val isAssetsCollected = repoDownloader.downloadAssets(repoName)
