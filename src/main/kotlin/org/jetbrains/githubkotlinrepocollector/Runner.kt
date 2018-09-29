@@ -13,60 +13,48 @@ import org.jetbrains.bytecodeparser.Stage as BytecodeStage
 object Runner {
     private const val JSON_EXT = "json"
 
-    private fun countFiles(path: String): Int {
-        var number = 0
-
-        File(path).walkTopDown().forEach {
-            if (it.isFile) {
-                number++
-            }
-        }
-
-        return number
-    }
+    private fun countFiles(path: String) = File(path).walkTopDown().count { it.isFile }
 
     fun run(repoInfoDirectory: String, reposDirectory: String) {
         val repoProcessor = RepoProcessor(reposDirectory)
         val repoInfoNodeReference = object: TypeReference<RepoInfoList>() {}
-        val timeLoggerCommon = TimeLogger(task_name = "REPOS PROCESS")
-        var reposTotal = 0
         var currentNumber = 0
+        var reposTotal = 0
 
-        JsonFilesReader<RepoInfoList>(repoInfoDirectory, JSON_EXT, repoInfoNodeReference).run(true) { content: RepoInfoList, file: File ->
+        JsonFilesReader<RepoInfoList>(repoInfoDirectory, JSON_EXT, repoInfoNodeReference).run(true) { content, _ ->
             reposTotal += content.items.size
         }
 
-        var removedRepo = 0
+        val timeLoggerCommon = TimeLogger()
+        var missedRepo = 0
         var filesNumber = 0
-        JsonFilesReader<RepoInfoList>(repoInfoDirectory, JSON_EXT, repoInfoNodeReference).run(true) { content: RepoInfoList, file: File ->
-            val timeLoggerChunk = TimeLogger(task_name = "REPOS CHUNK $file PROCESS")
+
+        JsonFilesReader<RepoInfoList>(repoInfoDirectory, JSON_EXT, repoInfoNodeReference).run(true) { content, file ->
+            val timeLoggerChunk = TimeLogger()
             content.items.forEach repoLoop@{
-                val cstFiles = countFiles("$reposDirectory/${it.full_name}/cst")
-                val sourcesFiles = countFiles("$reposDirectory/${it.full_name}/sources")
-
-                filesNumber += sourcesFiles
-
                 currentNumber++
 
-                if (Files.exists(File("$reposDirectory/${it.full_name}").toPath()) && (sourcesFiles == 0 || cstFiles == sourcesFiles)) {
+                if (Files.exists(File("$reposDirectory/${it.full_name}").toPath())) {
                     println("SKIP REPO (ALREADY PROCESSED): '${it.full_name}'")
-                    if (sourcesFiles == 0) {
-                        removedRepo++
-                    }
+                    missedRepo++
                     return@repoLoop
                 }
 
-                val timeLogger = TimeLogger(task_name = "REPO ${it.full_name} PROCESS ($currentNumber out of $reposTotal)")
+                val timeLogger = TimeLogger()
                 val repoIdentifier = it.full_name.split("/")
 
                 repoProcessor.downloadAndProcess(username = repoIdentifier[0], repo = repoIdentifier[1])
-                timeLogger.finish(fullFinish = true)
+
+                val sourcesFiles = countFiles("$reposDirectory/${it.full_name}/sources")
+
+                filesNumber += sourcesFiles
+                timeLogger.finish(task_name = "REPO ${it.full_name} PROCESSING ($currentNumber out of $reposTotal, source files: $sourcesFiles)")
             }
-            timeLoggerChunk.finish(fullFinish = true)
+            timeLoggerChunk.finish(task_name = "REPO LIST CHUNK $file PROCESSING", fullFinish = true)
         }
 
-        println("Removed repos: $removedRepo, total files: $filesNumber")
+        println("Missed repos: $missedRepo, total files: $filesNumber")
 
-        timeLoggerCommon.finish(fullFinish = true)
+        timeLoggerCommon.finish(task_name = "REPO LIST PROCESSING (total $reposTotal)", fullFinish = true)
     }
 }

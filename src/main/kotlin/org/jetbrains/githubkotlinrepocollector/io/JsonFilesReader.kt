@@ -17,7 +17,7 @@ class JsonFilesReader<T>(private val dirPath: String, private val filesExt: Stri
     private fun walkDirectory(withoutFirstSelect: Boolean = false, callback: (T, File) -> Unit) {
         val dir = File(dirPath)
         dir.walkTopDown().forEach {
-            if (it.isFile && it.name.endsWith(filesExt)) {
+            if (it.isFile && it.name.endsWith(filesExt) && it.readText().isNotEmpty()) {
                 if (withoutFirstSelect) {
                     callback(readFile(it, entityType), it)
                 } else {

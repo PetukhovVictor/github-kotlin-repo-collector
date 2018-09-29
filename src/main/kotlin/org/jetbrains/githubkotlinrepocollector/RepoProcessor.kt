@@ -5,7 +5,6 @@ import org.jetbrains.githubkotlinjarcollector.collection.JarExtractor
 import org.jetbrains.githubkotlinrepocollector.downloading.RepoDownloader
 import org.jetbrains.githubkotlinrepocollector.filtering.RepoClassesFilter
 import org.jetbrains.githubkotlinrepocollector.filtering.RepoSourcesFilter
-import org.jetbrains.githubkotlinrepocollector.helpers.TimeLogger
 import org.jetbrains.githubkotlinrepocollector.io.DirectoryWalker
 import org.jetbrains.bytecodeparser.Runner as BytecodeRunner
 import java.io.File
@@ -17,8 +16,6 @@ class RepoProcessor(private val reposDirectory: String) {
         private const val JARS_DIRECTORY = "jars"
         private const val CLASSES_DIRECTORY = "classes"
         private const val SOURCES_DIRECTORY = "sources"
-        private const val CST_DIRECTORY = "cst"
-        private const val KOTLIN_COMPILER_PATH = "libs/kotlinc/bin/kotlinc"
     }
 
     private val repoDownloader = RepoDownloader(reposDirectory)
@@ -49,61 +46,23 @@ class RepoProcessor(private val reposDirectory: String) {
         File(repoDirectoryAssets).deleteRecursively()
     }
 
-    private fun parsingToCst(username: String, repo: String, withCode: Boolean) {
-        val repoName = "$username/$repo"
-        val repoDirectory = "$reposDirectory/$repoName"
-        val timeLogger = TimeLogger(task_name = "PARSING TO CST")
-
-        if (Files.exists(File("$repoDirectory/$CST_DIRECTORY").toPath())) {
-            File("$repoDirectory/$CST_DIRECTORY").deleteRecursively()
-        }
-
-        CliRunner.run(KOTLIN_COMPILER_PATH, mapOf("" to "$repoDirectory/$SOURCES_DIRECTORY"), withPrint = false)
-        timeLogger.finish()
-    }
-
-    private fun moveCstToCstFolder(username: String, repo: String) {
-        val repoName = "$username/$repo"
-        val repoDirectory = "$reposDirectory/$repoName"
-        val sourceDirectory = "$repoDirectory/$SOURCES_DIRECTORY"
-        val cstDirectory = "$repoDirectory/$CST_DIRECTORY"
-
-        DirectoryWalker(sourceDirectory).run {
-            if (it.extension == "json") {
-                val relativePath = it.relativeTo(File(sourceDirectory))
-                val pathInCstFolder = File("$cstDirectory/$relativePath")
-
-                if (!Files.exists(pathInCstFolder.toPath())) {
-                    File(pathInCstFolder.parent).mkdirs()
-                    Files.move(it.toPath(), pathInCstFolder.toPath())
-                }
-            }
-        }
-    }
-
     fun downloadAndProcess(username: String, repo: String) {
         val repoName = "$username/$repo"
         val repoDirectory = File("$reposDirectory/$repoName")
 
         repoDirectory.mkdirs()
-        File("$reposDirectory/$repoName/cst").mkdirs()
 
         val isDownloaded = repoDownloader.downloadSource(repoName)
 
-        if (!isDownloaded) {
-            return
-        }
+        if (!isDownloaded) return
 
         repoSourcesFilter.filterByKtFiles("$repoName/$SOURCES_DIRECTORY")
 
         val isAssetsCollected = repoDownloader.downloadAssets(repoName)
-        parsingToCst(username, repo, isAssetsCollected)
-        moveCstToCstFolder(username, repo)
 
         if (isAssetsCollected) {
             assetsProcess(username, repo)
-            repoClassesFilter.filter("$repoName/$CST_DIRECTORY", "$repoName/$CLASSES_DIRECTORY")
+            repoClassesFilter.filter("$repoName/$SOURCES_DIRECTORY", "$repoName/$CLASSES_DIRECTORY")
         }
-        repoClassesFilter.removeCharsFromCst("$repoName/$CST_DIRECTORY")
     }
 }

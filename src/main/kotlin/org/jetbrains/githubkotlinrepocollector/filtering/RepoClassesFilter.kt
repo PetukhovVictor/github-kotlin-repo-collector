@@ -1,114 +1,49 @@
 package org.jetbrains.githubkotlinrepocollector.filtering
 
-import com.fasterxml.jackson.core.type.TypeReference
-import org.jetbrains.githubkotlinrepocollector.io.DirectoryWalker
-import org.jetbrains.githubkotlinrepocollector.io.FileWriter
-import org.jetbrains.githubkotlinrepocollector.io.JsonFilesReader
-import org.jetbrains.githubkotlinrepocollector.structures.CstNode
-import org.jetbrains.githubkotlinrepocollector.structures.CstNodeMinified
 import java.io.File
-import java.nio.file.Files
 import java.util.regex.Pattern
 
 class RepoClassesFilter(private val reposDirectory: String) {
     companion object {
-        private const val JSON_EXT = "json"
-        private const val TEMP_CLASSES_DIRECTORY = "classes_tmp"
-        private const val PACKAGE_DIRECTIVE = "PACKAGE_DIRECTIVE"
-    }
+        private const val MULTILINE_COMMENT_REGEX = """/\*\*?.*\*/"""
+        private const val SINGLELINE_COMMENT_REGEX = "//.*(?=\n)"
+        private const val STRINGS_REGEX = "/\".*\"/"
+        private const val MULTILINE_STRINGS_REGEX = "/\"\"\".*\"\"\"/"
 
-    private fun findPackageDirective(node: CstNode): String? {
-        if (node.type == PACKAGE_DIRECTIVE) {
-            return node.chars
-        }
+        private val packagePattern = Pattern.compile("""(?:;|\n)\s*package\s+(?<package>.*?)\s*(?:;|\n)""")
 
-        if (node.children != null) {
-            node.children!!.forEach {
-                val packageDirective = findPackageDirective(it)
+        private fun collectPackages(sourcesFolder: String): Set<String> {
+            val packages = mutableSetOf<String>()
 
-                if (packageDirective != null) {
-                    return packageDirective
-                }
+            File(sourcesFolder).walkTopDown().forEach {
+                if (it.extension != "kt") return@forEach
+
+                val contentWithoutCommentsAndString = it.readText()
+                        .replace(MULTILINE_COMMENT_REGEX.toRegex(RegexOption.DOT_MATCHES_ALL), "")
+                        .replace(SINGLELINE_COMMENT_REGEX.toRegex(), "")
+                        .replace(MULTILINE_STRINGS_REGEX.toRegex(RegexOption.DOT_MATCHES_ALL), "")
+                        .replace(STRINGS_REGEX.toRegex(), "")
+
+                val matcher = packagePattern.matcher(contentWithoutCommentsAndString)
+
+                packages.add(if (matcher.find()) matcher.group("package") else "")
             }
-        }
 
-        return null
-    }
-
-    private fun collectPackages(cstFolder: String): Set<String> {
-        val cstNodeReference = object: TypeReference<ArrayList<CstNode>>() {}
-        val packages = mutableSetOf<String>()
-
-        JsonFilesReader<CstNode>("$reposDirectory/$cstFolder", JSON_EXT, cstNodeReference).run { content: CstNode, file: File ->
-            if (content.children != null) {
-                val packageChars: String?
-
-                if (content.children!![0].type == PACKAGE_DIRECTIVE) {
-                    packageChars = content.children!![0].chars
-                } else {
-                    packageChars = findPackageDirective(content)
-                }
-
-                if (packageChars == null) {
-                    println("NOT PACKAGE DIRECTIVE: '$file'")
-                    return@run
-                }
-
-                val pattern = Pattern.compile("^package (?<package>.*?)$")
-                val matcher = pattern.matcher(packageChars)
-                if (matcher.matches()) {
-                    packages.add(matcher.group("package"))
-                } else {
-                    packages.add("")
-                    println("WITHOUT PACKAGE DETECTED: '$packageChars'")
-                }
-            } else {
-                println("EMPTY FILE DETECTED: '$file'")
-            }
-        }
-
-        return packages
-    }
-
-    private fun walkCstAndRewriteWithoutChars(content: CstNode, node: CstNodeMinified) {
-        node.type = content.type
-
-        if (content.children != null) {
-            node.children = mutableListOf()
-            content.children!!.forEach {
-                val newCstNode = CstNodeMinified()
-                walkCstAndRewriteWithoutChars(it, newCstNode)
-                node.children!!.add(newCstNode)
-            }
+            return packages
         }
     }
 
-    fun removeCharsFromCst(cstFolder: String) {
-        val cstNodeReference = object: TypeReference<ArrayList<CstNode>>() {}
-
-        JsonFilesReader<CstNode>("$reposDirectory/$cstFolder", JSON_EXT, cstNodeReference).run { content: CstNode, file: File ->
-            val cstWithoutChars = CstNodeMinified()
-            walkCstAndRewriteWithoutChars(content, cstWithoutChars)
-            FileWriter.write(file, cstWithoutChars)
-        }
-    }
-
-    fun filter(cstFolder: String, classesFolder: String) {
-        val packages = collectPackages(cstFolder)
+    fun filter(sourcesFolder: String, classesFolder: String) {
+        val packages = collectPackages("$reposDirectory/$sourcesFolder")
         val classesDirectory = "$reposDirectory/$classesFolder"
-        val classesTempDirectory = File("$reposDirectory/${File(classesFolder).parent}/$TEMP_CLASSES_DIRECTORY")
 
-        packages.forEach {
-            val packagePath = it.split(".").joinToString("/")
-            val packageDirectory = "$classesTempDirectory/$packagePath"
+        File(classesDirectory).walkTopDown().forEach {
+            if (it.extension != "kt") return@forEach
 
-            File(packageDirectory).mkdirs()
-            DirectoryWalker("$classesDirectory/$packagePath", maxDepth = 1).run {
-                Files.copy(it.toPath(), File("$packageDirectory/${it.name}").toPath())
-            }
+            val `package` = it.relativeTo(File(classesDirectory)).parent.replace("/", ".")
+
+            if (!packages.contains(`package`))
+                it.delete()
         }
-
-        File(classesDirectory).deleteRecursively()
-        classesTempDirectory.renameTo(File(classesDirectory))
     }
 }
